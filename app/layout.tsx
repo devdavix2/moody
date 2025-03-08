@@ -9,7 +9,9 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "MoodyFlicks - Movie Recommendations Based on Your Mood",
   description: "Discover movies that match your current mood with MoodyFlicks",
-    generator: 'v0.dev'
+    generator: 'v0.dev',
+      icon: "/favicon.ico", // This references public/favicon.ico
+
 }
 
 export default function RootLayout({
