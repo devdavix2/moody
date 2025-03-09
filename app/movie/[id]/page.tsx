@@ -52,16 +52,12 @@ export default function MovieDetailPage({ params }) {
   const [collections, setCollections] = useLocalStorage("moodyflicks-collections", [])
   const [selectedCollection, setSelectedCollection] = useState("")
 
-  useEffect(() => {
-if (!id) return;
-    const [selectedCollection, setSelectedCollection] = useState("")
-
+  // Redirect to home if no id, then fetch movie details.
   useEffect(() => {
     if (!id) {
       router.push("/")
       return
     }
-
     fetchMovieDetails(id)
   }, [id, router])
 
@@ -133,7 +129,6 @@ if (!id) return;
     [setPoints],
   )
 
-  // Replace the markAsWatched function with this version that uses more guards
   const markAsWatched = useCallback(() => {
     const movieId = Number(id)
 
@@ -154,12 +149,12 @@ if (!id) return;
     addPoints(10)
 
     // Show confetti
-    if (typeof window !== 'undefined' && window.innerWidth > 0) {
+    if (typeof window !== "undefined" && window.innerWidth > 0) {
       confetti({
         particleCount: 50,
         spread: 70,
-        origin: { y: 0.6 }
-      });
+        origin: { y: 0.6 },
+      })
     }
 
     toast({
@@ -182,7 +177,6 @@ if (!id) return;
     }
   }, [id, moviesWatched, setMoviesWatched, addPoints, achievements, setAchievements, toast])
 
-  // Replace the rateMovie function with this version that uses more guards
   const rateMovie = useCallback(
     (liked) => {
       const movieId = Number(id)
@@ -228,12 +222,12 @@ if (!id) return;
   const toggleSaveMovie = useCallback(() => {
     const movieId = Number(id)
     const isSaved = moviesSaved.includes(movieId)
-    
+
     if (isSaved) {
       // Remove from saved
-      const newSaved = moviesSaved.filter(id => id !== movieId)
+      const newSaved = moviesSaved.filter((savedId) => savedId !== movieId)
       setMoviesSaved(newSaved)
-      
+
       toast({
         title: "Movie Removed",
         description: "Movie has been removed from your watchlist.",
@@ -242,21 +236,21 @@ if (!id) return;
       // Add to saved
       const newSaved = [...moviesSaved, movieId]
       setMoviesSaved(newSaved)
-      
-      // Add points first time
+
+      // Award points for first save only
       if (moviesSaved.length === 0) {
         addPoints(5)
       }
-      
+
       toast({
         title: "Movie Saved! 🎬",
         description: "Added to your watchlist for later.",
       })
-      
+
       // Check for achievement
       if (!achievements.includes("collector") && newSaved.length >= 10) {
-        setAchievements(prev => [...prev, "collector"])
-        
+        setAchievements((prev) => [...prev, "collector"])
+
         setTimeout(() => {
           addPoints(25)
           toast({
@@ -270,14 +264,14 @@ if (!id) return;
 
   const handleAddToCollection = useCallback(() => {
     if (!selectedCollection || !id) return
-    
+
     const movieId = Number(id)
     const collectionId = selectedCollection
-    
+
     // Find the collection
-    const collection = collections.find(c => c.id === collectionId)
+    const collection = collections.find((c) => c.id === collectionId)
     if (!collection) return
-    
+
     // Check if movie is already in collection
     if (collection.movies.includes(movieId)) {
       toast({
@@ -286,30 +280,30 @@ if (!id) return;
       })
       return
     }
-    
+
     // Add movie to collection
-    const updatedCollections = collections.map(c => 
-      c.id === collectionId 
-        ? {...c, movies: [...c.movies, movieId], updatedAt: new Date().toISOString()} 
-        : c
+    const updatedCollections = collections.map((c) =>
+      c.id === collectionId
+        ? { ...c, movies: [...c.movies, movieId], updatedAt: new Date().toISOString() }
+        : c,
     )
-    
+
     setCollections(updatedCollections)
     setSelectedCollection("")
-    
+
     toast({
       title: "Added to Collection",
       description: `Added to "${collection.name}".`,
     })
-    
+
     // Award points for first collection addition
     if (!achievements.includes("curator")) {
-      const allMoviesInCollections = collections.flatMap(c => c.movies)
+      const allMoviesInCollections = collections.flatMap((c) => c.movies)
       if (allMoviesInCollections.length === 0) {
         addPoints(10)
-        
+
         setTimeout(() => {
-          setAchievements(prev => [...prev, "curator"])
+          setAchievements((prev) => [...prev, "curator"])
           toast({
             title: "New Achievement! 🏆",
             description: "Movie Curator: You've started organizing your movie collection!",
@@ -322,9 +316,9 @@ if (!id) return;
   const handleTriviaLike = useCallback(() => {
     // Award points for liking trivia (max 3 times per movie)
     if (triviaPoints < 3) {
-      setTriviaPoints(prev => prev + 1)
+      setTriviaPoints((prev) => prev + 1)
       addPoints(2)
-      
+
       toast({
         title: "Trivia Liked!",
         description: "You earned 2 points for engaging with movie trivia.",
@@ -421,12 +415,8 @@ if (!id) return;
                       Dislike
                     </Button>
                   </div>
-                  
-                  <Button
-                    variant="outline"
-                    onClick={toggleSaveMovie}
-                    className="flex items-center gap-2"
-                  >
+
+                  <Button variant="outline" onClick={toggleSaveMovie} className="flex items-center gap-2">
                     {moviesSaved.includes(Number(id)) ? (
                       <>
                         <BookmarkCheck className="h-4 w-4 text-primary" />
@@ -439,7 +429,7 @@ if (!id) return;
                       </>
                     )}
                   </Button>
-                  
+
                   {collections.length > 0 && (
                     <div className="mt-2">
                       <select
@@ -448,30 +438,26 @@ if (!id) return;
                         className="w-full p-2 rounded-md border border-input bg-background text-sm"
                       >
                         <option value="">Add to collection...</option>
-                        {collections.map(collection => (
+                        {collections.map((collection) => (
                           <option key={collection.id} value={collection.id}>
                             {collection.name}
                           </option>
                         ))}
                       </select>
-                      
+
                       {selectedCollection && (
-                        <Button 
-                          onClick={handleAddToCollection}
-                          size="sm"
-                          className="w-full mt-2"
-                        >
+                        <Button onClick={handleAddToCollection} size="sm" className="w-full mt-2">
                           Add to Collection
                         </Button>
                       )}
                     </div>
                   )}
                 </div>
-                
+
                 <div className="mt-6">
                   <MovieMoodMeter movieId={Number(id)} />
                 </div>
-                
+
                 <div className="mt-4">
                   <MovieTrivia movieId={Number(id)} onLike={handleTriviaLike} />
                 </div>
@@ -514,43 +500,43 @@ if (!id) return;
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
                   <TabsList>
                     <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="cast">Cast & Crew</TabsTrigger>
+                    <TabsTrigger value="cast">Cast &amp; Crew</TabsTrigger>
                     {movie.videos?.results?.length > 0 && (
                       <TabsTrigger value="videos">Videos</TabsTrigger>
                     )}
                   </TabsList>
-                  
+
                   <TabsContent value="overview" className="mt-4">
                     <div className="mb-6">
                       <h2 className="text-xl font-semibold mb-2">Overview</h2>
                       <p className="text-muted-foreground">{movie.overview}</p>
-                      
+
                       {movie.tagline && (
                         <div className="mt-4 italic text-muted-foreground">
                           "{movie.tagline}"
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4 mb-6">
                       {movie.production_companies?.length > 0 && (
                         <div>
                           <h3 className="text-sm font-medium mb-1">Production</h3>
                           <p className="text-sm text-muted-foreground">
-                            {movie.production_companies.map(c => c.name).join(", ")}
+                            {movie.production_companies.map((c) => c.name).join(", ")}
                           </p>
                         </div>
                       )}
-                      
+
                       {movie.production_countries?.length > 0 && (
                         <div>
                           <h3 className="text-sm font-medium mb-1">Country</h3>
                           <p className="text-sm text-muted-foreground">
-                            {movie.production_countries.map(c => c.name).join(", ")}
+                            {movie.production_countries.map((c) => c.name).join(", ")}
                           </p>
                         </div>
                       )}
-                      
+
                       {movie.budget > 0 && (
                         <div>
                           <h3 className="text-sm font-medium mb-1">Budget</h3>
@@ -559,7 +545,7 @@ if (!id) return;
                           </p>
                         </div>
                       )}
-                      
+
                       {movie.revenue > 0 && (
                         <div>
                           <h3 className="text-sm font-medium mb-1">Revenue</h3>
@@ -570,7 +556,7 @@ if (!id) return;
                       )}
                     </div>
                   </TabsContent>
-                  
+
                   <TabsContent value="cast" className="mt-4">
                     {credits && (
                       <>
@@ -599,40 +585,43 @@ if (!id) return;
                             ))}
                           </div>
                         </div>
-                        
+
                         <div>
                           <h2 className="text-xl font-semibold mb-2">Crew</h2>
                           <div className="grid grid-cols-2 gap-4">
-                            {credits.crew?.filter(c => 
-                              ["Director", "Producer", "Screenplay", "Writer"].includes(c.job)
-                            ).slice(0, 6).map((person) => (
-                              <div key={`${person.id}-${person.job}`} className="flex items-center gap-3">
-                                <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
-                                  {person.profile_path ? (
-                                    <Image
-                                      src={`https://image.tmdb.org/t/p/w200${person.profile_path}`}
-                                      alt={person.name}
-                                      fill
-                                      className="object-cover"
-                                    />
-                                  ) : (
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                      <span className="text-xl">👤</span>
-                                    </div>
-                                  )}
+                            {credits.crew
+                              ?.filter((c) =>
+                                ["Director", "Producer", "Screenplay", "Writer"].includes(c.job),
+                              )
+                              .slice(0, 6)
+                              .map((person) => (
+                                <div key={`${person.id}-${person.job}`} className="flex items-center gap-3">
+                                  <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
+                                    {person.profile_path ? (
+                                      <Image
+                                        src={`https://image.tmdb.org/t/p/w200${person.profile_path}`}
+                                        alt={person.name}
+                                        fill
+                                        className="object-cover"
+                                      />
+                                    ) : (
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <span className="text-xl">👤</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <h3 className="font-medium text-sm">{person.name}</h3>
+                                    <p className="text-xs text-muted-foreground">{person.job}</p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <h3 className="font-medium text-sm">{person.name}</h3>
-                                  <p className="text-xs text-muted-foreground">{person.job}</p>
-                                </div>
-                              </div>
-                            ))}
+                              ))}
                           </div>
                         </div>
                       </>
                     )}
                   </TabsContent>
-                  
+
                   <TabsContent value="videos" className="mt-4">
                     {movie.videos?.results?.length > 0 && (
                       <div>
@@ -648,10 +637,10 @@ if (!id) return;
                             allowFullScreen
                           ></iframe>
                         </div>
-                        
+
                         {movie.videos.results.length > 1 && (
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            {movie.videos.results.slice(1, 4).map(video => (
+                            {movie.videos.results.slice(1, 4).map((video) => (
                               <div key={video.id} className="text-center">
                                 <div className="relative aspect-video rounded-lg overflow-hidden bg-muted mb-2">
                                   <Image
@@ -766,3 +755,4 @@ if (!id) return;
   )
 }
 
+export default MovieDetailPage
