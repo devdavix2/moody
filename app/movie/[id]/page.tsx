@@ -16,6 +16,8 @@ import {
   Trophy,
   ThumbsUp,
   ThumbsDown,
+  Bookmark,
+  BookmarkCheck,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -24,6 +26,10 @@ import { Toaster } from "@/components/ui/toaster"
 import { useToast } from "@/hooks/use-toast"
 import ShareMenu from "@/components/share-menu"
 import { useLocalStorage } from "@/hooks/use-local-storage"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import MovieTrivia from "@/components/movie-trivia"
+import MovieMoodMeter from "@/components/movie-mood-meter"
+import confetti from "canvas-confetti"
 
 export default function MovieDetailPage({ params }) {
   const router = useRouter()
@@ -32,12 +38,23 @@ export default function MovieDetailPage({ params }) {
   const [loading, setLoading] = useState(true)
   const [credits, setCredits] = useState(null)
   const [shareOpen, setShareOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState("overview")
+  const [userRating, setUserRating] = useState(0)
+  const [userReview, setUserReview] = useState("")
+  const [triviaPoints, setTriviaPoints] = useState(0)
   const { toast } = useToast()
   const [points, setPoints] = useLocalStorage("moodyflicks-points", 0)
   const [moviesWatched, setMoviesWatched] = useLocalStorage("moodyflicks-watched", [])
   const [moviesRated, setMoviesRated] = useLocalStorage("moodyflicks-rated", [])
+  const [moviesSaved, setMoviesSaved] = useLocalStorage("moodyflicks-saved", [])
   const [achievements, setAchievements] = useLocalStorage("moodyflicks-achievements", [])
   const [similarMovies, setSimilarMovies] = useState([])
+  const [collections, setCollections] = useLocalStorage("moodyflicks-collections", [])
+  const [selectedCollection, setSelectedCollection] = useState("")
+
+  useEffect(() => {\
+    if (!id)  [])
+  const [selectedCollection, setSelectedCollection] = useState("")
 
   useEffect(() => {
     if (!id) {
@@ -136,6 +153,15 @@ export default function MovieDetailPage({ params }) {
     // Add points
     addPoints(10)
 
+    // Show confetti
+    if (typeof window !== 'undefined' && window.innerWidth > 0) {
+      confetti({
+        particleCount: 50,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    }
+
     toast({
       title: "Movie Marked as Watched! ✅",
       description: "You've earned 10 points for your movie journey.",
@@ -198,6 +224,113 @@ export default function MovieDetailPage({ params }) {
     },
     [id, moviesRated, setMoviesRated, addPoints, achievements, setAchievements, toast],
   )
+
+  const toggleSaveMovie = useCallback(() => {
+    const movieId = Number(id)
+    const isSaved = moviesSaved.includes(movieId)
+    
+    if (isSaved) {
+      // Remove from saved
+      const newSaved = moviesSaved.filter(id => id !== movieId)
+      setMoviesSaved(newSaved)
+      
+      toast({
+        title: "Movie Removed",
+        description: "Movie has been removed from your watchlist.",
+      })
+    } else {
+      // Add to saved
+      const newSaved = [...moviesSaved, movieId]
+      setMoviesSaved(newSaved)
+      
+      // Add points first time
+      if (moviesSaved.length === 0) {
+        addPoints(5)
+      }
+      
+      toast({
+        title: "Movie Saved! 🎬",
+        description: "Added to your watchlist for later.",
+      })
+      
+      // Check for achievement
+      if (!achievements.includes("collector") && newSaved.length >= 10) {
+        setAchievements(prev => [...prev, "collector"])
+        
+        setTimeout(() => {
+          addPoints(25)
+          toast({
+            title: "New Achievement! 🏆",
+            description: "Movie Collector: You've saved 10 movies to your watchlist!",
+          })
+        }, 100)
+      }
+    }
+  }, [id, moviesSaved, setMoviesSaved, addPoints, achievements, setAchievements, toast])
+
+  const handleAddToCollection = useCallback(() => {
+    if (!selectedCollection || !id) return
+    
+    const movieId = Number(id)
+    const collectionId = selectedCollection
+    
+    // Find the collection
+    const collection = collections.find(c => c.id === collectionId)
+    if (!collection) return
+    
+    // Check if movie is already in collection
+    if (collection.movies.includes(movieId)) {
+      toast({
+        title: "Already Added",
+        description: `This movie is already in "${collection.name}".`,
+      })
+      return
+    }
+    
+    // Add movie to collection
+    const updatedCollections = collections.map(c => 
+      c.id === collectionId 
+        ? {...c, movies: [...c.movies, movieId], updatedAt: new Date().toISOString()} 
+        : c
+    )
+    
+    setCollections(updatedCollections)
+    setSelectedCollection("")
+    
+    toast({
+      title: "Added to Collection",
+      description: `Added to "${collection.name}".`,
+    })
+    
+    // Award points for first collection addition
+    if (!achievements.includes("curator")) {
+      const allMoviesInCollections = collections.flatMap(c => c.movies)
+      if (allMoviesInCollections.length === 0) {
+        addPoints(10)
+        
+        setTimeout(() => {
+          setAchievements(prev => [...prev, "curator"])
+          toast({
+            title: "New Achievement! 🏆",
+            description: "Movie Curator: You've started organizing your movie collection!",
+          })
+        }, 100)
+      }
+    }
+  }, [id, selectedCollection, collections, setCollections, achievements, setAchievements, addPoints, toast])
+
+  const handleTriviaLike = useCallback(() => {
+    // Award points for liking trivia (max 3 times per movie)
+    if (triviaPoints < 3) {
+      setTriviaPoints(prev => prev + 1)
+      addPoints(2)
+      
+      toast({
+        title: "Trivia Liked!",
+        description: "You earned 2 points for engaging with movie trivia.",
+      })
+    }
+  }, [triviaPoints, addPoints, toast])
 
   const formatRuntime = (minutes) => {
     const hours = Math.floor(minutes / 60)
@@ -288,6 +421,59 @@ export default function MovieDetailPage({ params }) {
                       Dislike
                     </Button>
                   </div>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={toggleSaveMovie}
+                    className="flex items-center gap-2"
+                  >
+                    {moviesSaved.includes(Number(id)) ? (
+                      <>
+                        <BookmarkCheck className="h-4 w-4 text-primary" />
+                        Saved to Watchlist
+                      </>
+                    ) : (
+                      <>
+                        <Bookmark className="h-4 w-4" />
+                        Add to Watchlist
+                      </>
+                    )}
+                  </Button>
+                  
+                  {collections.length > 0 && (
+                    <div className="mt-2">
+                      <select
+                        value={selectedCollection}
+                        onChange={(e) => setSelectedCollection(e.target.value)}
+                        className="w-full p-2 rounded-md border border-input bg-background text-sm"
+                      >
+                        <option value="">Add to collection...</option>
+                        {collections.map(collection => (
+                          <option key={collection.id} value={collection.id}>
+                            {collection.name}
+                          </option>
+                        ))}
+                      </select>
+                      
+                      {selectedCollection && (
+                        <Button 
+                          onClick={handleAddToCollection}
+                          size="sm"
+                          className="w-full mt-2"
+                        >
+                          Add to Collection
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="mt-6">
+                  <MovieMoodMeter movieId={Number(id)} />
+                </div>
+                
+                <div className="mt-4">
+                  <MovieTrivia movieId={Number(id)} onLike={handleTriviaLike} />
                 </div>
               </div>
 
@@ -325,40 +511,168 @@ export default function MovieDetailPage({ params }) {
                   ))}
                 </div>
 
-                <div className="mb-6">
-                  <h2 className="text-xl font-semibold mb-2">Overview</h2>
-                  <p className="text-muted-foreground">{movie.overview}</p>
-                </div>
-
-                {credits && (
-                  <div className="mb-6">
-                    <h2 className="text-xl font-semibold mb-2">Cast</h2>
-                    <div className="flex flex-wrap gap-2">
-                      {credits.cast?.slice(0, 5).map((person) => (
-                        <Badge key={person.id} variant="outline">
-                          {person.name} as {person.character}
-                        </Badge>
-                      ))}
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+                  <TabsList>
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="cast">Cast & Crew</TabsTrigger>
+                    {movie.videos?.results?.length > 0 && (
+                      <TabsTrigger value="videos">Videos</TabsTrigger>
+                    )}
+                  </TabsList>
+                  
+                  <TabsContent value="overview" className="mt-4">
+                    <div className="mb-6">
+                      <h2 className="text-xl font-semibold mb-2">Overview</h2>
+                      <p className="text-muted-foreground">{movie.overview}</p>
+                      
+                      {movie.tagline && (
+                        <div className="mt-4 italic text-muted-foreground">
+                          "{movie.tagline}"
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-
-                {movie.videos?.results?.length > 0 && (
-                  <div className="mb-6">
-                    <h2 className="text-xl font-semibold mb-2">Trailer</h2>
-                    <div className="aspect-video w-full max-w-2xl rounded-lg overflow-hidden">
-                      <iframe
-                        width="100%"
-                        height="100%"
-                        src={`https://www.youtube.com/embed/${movie.videos.results[0].key}`}
-                        title={`${movie.title} Trailer`}
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      ></iframe>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      {movie.production_companies?.length > 0 && (
+                        <div>
+                          <h3 className="text-sm font-medium mb-1">Production</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {movie.production_companies.map(c => c.name).join(", ")}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {movie.production_countries?.length > 0 && (
+                        <div>
+                          <h3 className="text-sm font-medium mb-1">Country</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {movie.production_countries.map(c => c.name).join(", ")}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {movie.budget > 0 && (
+                        <div>
+                          <h3 className="text-sm font-medium mb-1">Budget</h3>
+                          <p className="text-sm text-muted-foreground">
+                            ${(movie.budget / 1000000).toFixed(1)} million
+                          </p>
+                        </div>
+                      )}
+                      
+                      {movie.revenue > 0 && (
+                        <div>
+                          <h3 className="text-sm font-medium mb-1">Revenue</h3>
+                          <p className="text-sm text-muted-foreground">
+                            ${(movie.revenue / 1000000).toFixed(1)} million
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  </TabsContent>
+                  
+                  <TabsContent value="cast" className="mt-4">
+                    {credits && (
+                      <>
+                        <div className="mb-6">
+                          <h2 className="text-xl font-semibold mb-2">Cast</h2>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {credits.cast?.slice(0, 8).map((person) => (
+                              <div key={person.id} className="text-center">
+                                <div className="relative w-full aspect-square mb-2 rounded-lg overflow-hidden bg-muted">
+                                  {person.profile_path ? (
+                                    <Image
+                                      src={`https://image.tmdb.org/t/p/w200${person.profile_path}`}
+                                      alt={person.name}
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  ) : (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <span className="text-4xl">👤</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <h3 className="font-medium text-sm">{person.name}</h3>
+                                <p className="text-xs text-muted-foreground">{person.character}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <h2 className="text-xl font-semibold mb-2">Crew</h2>
+                          <div className="grid grid-cols-2 gap-4">
+                            {credits.crew?.filter(c => 
+                              ["Director", "Producer", "Screenplay", "Writer"].includes(c.job)
+                            ).slice(0, 6).map((person) => (
+                              <div key={`${person.id}-${person.job}`} className="flex items-center gap-3">
+                                <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
+                                  {person.profile_path ? (
+                                    <Image
+                                      src={`https://image.tmdb.org/t/p/w200${person.profile_path}`}
+                                      alt={person.name}
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  ) : (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <span className="text-xl">👤</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <h3 className="font-medium text-sm">{person.name}</h3>
+                                  <p className="text-xs text-muted-foreground">{person.job}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="videos" className="mt-4">
+                    {movie.videos?.results?.length > 0 && (
+                      <div>
+                        <h2 className="text-xl font-semibold mb-2">Videos</h2>
+                        <div className="aspect-video w-full max-w-2xl rounded-lg overflow-hidden mb-4">
+                          <iframe
+                            width="100%"
+                            height="100%"
+                            src={`https://www.youtube.com/embed/${movie.videos.results[0].key}`}
+                            title={`${movie.title} Trailer`}
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          ></iframe>
+                        </div>
+                        
+                        {movie.videos.results.length > 1 && (
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {movie.videos.results.slice(1, 4).map(video => (
+                              <div key={video.id} className="text-center">
+                                <div className="relative aspect-video rounded-lg overflow-hidden bg-muted mb-2">
+                                  <Image
+                                    src={`https://img.youtube.com/vi/${video.key}/mqdefault.jpg`}
+                                    alt={video.name}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 hover:bg-black/30 transition-colors">
+                                    <Film className="h-8 w-8 text-white" />
+                                  </div>
+                                </div>
+                                <p className="text-xs line-clamp-1">{video.name}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
 
                 <div className="flex gap-2">
                   <Button onClick={() => window.open(`https://www.themoviedb.org/movie/${movie.id}`, "_blank")}>

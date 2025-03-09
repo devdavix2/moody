@@ -15,6 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { useLocalStorage } from "@/hooks/use-local-storage"
+import DailyChallenge from "@/components/daily-challenge"
+import MovieCollections from "@/components/movie-collections"
 
 // Define mood types and their corresponding genres/keywords
 const moodMap = {
@@ -248,11 +250,17 @@ export default function RecommendationsPage({ params }) {
             <p className="text-xs text-muted-foreground mt-1">{100 - (points % 100)} points until next level</p>
           </div>
 
+          {/* Daily Challenge Section */}
+          <div className="mb-6">
+            <DailyChallenge onComplete={addPoints} />
+          </div>
+
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-6">
               <TabsTrigger value="movies">Movie Picks</TabsTrigger>
               <TabsTrigger value="quiz">Movie Quiz</TabsTrigger>
               <TabsTrigger value="roulette">Movie Roulette</TabsTrigger>
+              <TabsTrigger value="collections">Collections</TabsTrigger>
             </TabsList>
 
             <TabsContent value="movies">
@@ -270,6 +278,10 @@ export default function RecommendationsPage({ params }) {
 
             <TabsContent value="roulette">
               <MovieRoulette mood={mood} onSelect={(movieId) => router.push(`/movie/${movieId}`)} />
+            </TabsContent>
+
+            <TabsContent value="collections">
+              <MovieCollections />
             </TabsContent>
           </Tabs>
 
@@ -333,6 +345,16 @@ export default function RecommendationsPage({ params }) {
                 {achievements.includes("quiz-master") && (
                   <Badge variant="outline" className="bg-amber-100 text-amber-800 hover:bg-amber-200">
                     Quiz Master
+                  </Badge>
+                )}
+                {achievements.includes("quiz-streak") && (
+                  <Badge variant="outline" className="bg-amber-100 text-amber-800 hover:bg-amber-200">
+                    Quiz Enthusiast
+                  </Badge>
+                )}
+                {achievements.includes("daily-streak") && (
+                  <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-200">
+                    Daily Devotion
                   </Badge>
                 )}
                 {achievements.includes("sharing") && (
