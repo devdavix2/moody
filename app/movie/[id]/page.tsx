@@ -755,4 +755,3 @@ export default function MovieDetailPage({ params }) {
   )
 }
 
-export default MovieDetailPage
