@@ -52,7 +52,7 @@ export default function MovieDetailPage({ params }) {
   const [collections, setCollections] = useLocalStorage("moodyflicks-collections", [])
   const [selectedCollection, setSelectedCollection] = useState("")
 
-  useEffect(() => {\
+  useEffect(() => {
     if (!id)  [])
   const [selectedCollection, setSelectedCollection] = useState("")
 
