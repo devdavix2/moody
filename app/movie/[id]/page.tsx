@@ -53,8 +53,8 @@ export default function MovieDetailPage({ params }) {
   const [selectedCollection, setSelectedCollection] = useState("")
 
   useEffect(() => {
-    if (!id)  [])
-  const [selectedCollection, setSelectedCollection] = useState("")
+if (!id) return;
+    const [selectedCollection, setSelectedCollection] = useState("")
 
   useEffect(() => {
     if (!id) {
